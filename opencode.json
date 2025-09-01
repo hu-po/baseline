@@ -6,7 +6,7 @@
         "ollama": {
             "npm": "@ai-sdk/openai-compatible",
             "options": {
-                "baseURL": "http://192.168.1.96:11434/v1"
+                "baseURL": "http://0.0.0.0:11434/v1"
             },
             "models": {
                 "gpt-oss:20b": {
