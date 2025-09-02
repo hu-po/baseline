@@ -68,7 +68,7 @@ class ViTConfig:
         self.num_patches = (self.image_size // self.patch_size) ** 2
 
 
-def create_data_augmentation(config: ViTConfig, x_train: np.ndarray) -> keras.Sequential:
+def create_data_augmentation(config, x_train):
     """Create data augmentation pipeline."""
     data_augmentation = keras.Sequential(
         [
@@ -84,7 +84,7 @@ def create_data_augmentation(config: ViTConfig, x_train: np.ndarray) -> keras.Se
     return data_augmentation
 
 
-def mlp(x, hidden_units: List[int], dropout_rate: float):
+def mlp(x, hidden_units, dropout_rate):
     """Multi-layer perceptron block."""
     for units in hidden_units:
         x = layers.Dense(units, activation=keras.activations.gelu)(x)
@@ -149,7 +149,7 @@ class CustomWandbCallback(keras.callbacks.Callback):
 class Patches(layers.Layer):
     """Extract patches from images."""
     
-    def __init__(self, patch_size: int):
+    def __init__(self, patch_size):
         super().__init__()
         self.patch_size = patch_size
 
@@ -184,7 +184,7 @@ class Patches(layers.Layer):
 class PatchEncoder(layers.Layer):
     """Encode patches with linear projection and position embeddings."""
     
-    def __init__(self, num_patches: int, projection_dim: int):
+    def __init__(self, num_patches, projection_dim):
         super().__init__()
         self.num_patches = num_patches
         self.projection = layers.Dense(units=projection_dim)
@@ -206,7 +206,7 @@ class PatchEncoder(layers.Layer):
         return config
 
 
-def create_vit_classifier(config: ViTConfig, data_augmentation: keras.Sequential) -> keras.Model:
+def create_vit_classifier(config, data_augmentation):
     """Build the Vision Transformer model."""
     inputs = keras.Input(shape=config.input_shape)
     
@@ -252,8 +252,7 @@ def create_vit_classifier(config: ViTConfig, data_augmentation: keras.Sequential
     return model
 
 
-def run_experiment(model: keras.Model, config: ViTConfig, x_train: np.ndarray, 
-                  y_train: np.ndarray, x_test: np.ndarray, y_test: np.ndarray):
+def run_experiment(model, config, x_train, y_train, x_test, y_test):
     """Compile, train, and evaluate the model."""
     optimizer = keras.optimizers.AdamW(
         learning_rate=config.learning_rate, weight_decay=config.weight_decay
@@ -310,8 +309,11 @@ def run_experiment(model: keras.Model, config: ViTConfig, x_train: np.ndarray,
     return history, test_accuracy, test_top5_accuracy
 
 
-def main(config: ViTConfig = ViTConfig()):
+def main(config=None):
     """Main training function."""
+    if config is None:
+        config = ViTConfig()
+    
     # Auto-detect node name if not set
     if config.node_name == "unknown":
         import socket

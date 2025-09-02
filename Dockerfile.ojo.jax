@@ -5,6 +5,9 @@ FROM dustynv/jax:r36.4.0
 # Set working directory
 WORKDIR /workspace
 
+# Create python symlink for compatibility
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
 # Install additional ML dependencies
 # Note: Jetson base images often set a custom PIP_INDEX_URL which may not host pure-Python
 # packages like Keras. Add PyPI as an extra index to ensure availability.
