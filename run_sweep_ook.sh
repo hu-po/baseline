@@ -88,7 +88,7 @@ else:
     sweep_config['parameters']['batch_size'] = {'values': [64, 128, 256, 512]}
 
 # Set sweep name with backend and node suffix
-sweep_config['name'] = f\"{sweep_config.get('name', 'keras3_edge_baseline')}_{$NODE_NAME}_{$keras_backend}\"
+sweep_config['name'] = f\"{sweep_config.get('name', 'keras3_edge_baseline')}_{'$NODE_NAME'}_{'$keras_backend'}\"
 
 # Initialize wandb and create sweep
 wandb.login()

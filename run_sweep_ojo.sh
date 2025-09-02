@@ -89,7 +89,7 @@ sweep_config['parameters']['image_size'] = {'values': [48, 64, 72]}
 sweep_config['parameters']['num_epochs'] = {'value': 15}  # Slightly fewer epochs for faster iteration
 
 # Set sweep name with backend and node suffix
-sweep_config['name'] = f\"{sweep_config.get('name', 'keras3_edge_baseline')}_{$NODE_NAME}_{$keras_backend}\"
+sweep_config['name'] = f\"{sweep_config.get('name', 'keras3_edge_baseline')}_{'$NODE_NAME'}_{'$keras_backend'}\"
 
 # Initialize wandb and create sweep
 wandb.login()
