@@ -1,0 +1,66 @@
+# Base image with NVIDIA CUDA runtime for GPU; switch to python-slim for CPU-only builds if desired.
+# This Dockerfile targets the x86_64 system described in system_ook.md (RTX 4050, CUDA 12.x).
+
+ARG BASE_IMAGE=nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu22.04
+FROM ${BASE_IMAGE}
+
+# Set non-interactive frontend and sensible defaults for headless plotting and JAX memory behavior
+ENV DEBIAN_FRONTEND=noninteractive \
+    MPLBACKEND=Agg \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    XLA_PYTHON_CLIENT_PREALLOCATE=false
+
+WORKDIR /app
+
+# Install Python and system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 python3.11-venv python3.11-distutils python3-pip \
+    libglib2.0-0 libsm6 libxext6 libxrender1 curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Ensure `python` points to Python 3.11
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+# Copy application code
+COPY vit.py /app/
+
+# Install Python dependencies
+#
+# Keras 3 supports multiple backends. vit.py sets KERAS_BACKEND=jax.
+# For CPU-only: install jax[cpu]. For GPU: install jax with CUDA 12 wheels.
+# You can switch between CPU/GPU via build arg JAX_DEVICE.
+
+ARG JAX_DEVICE=gpu
+ARG JAX_VERSION=
+
+RUN set -eux; \
+    python -m pip install --upgrade pip; \
+    # Core libs
+    python -m pip install --no-cache-dir numpy matplotlib "keras>=3.0.0"; \
+    if [ "${JAX_DEVICE}" = "cpu" ]; then \
+        if [ -n "${JAX_VERSION}" ]; then \
+            python -m pip install --no-cache-dir "jax[cpu]==${JAX_VERSION}"; \
+        else \
+            python -m pip install --no-cache-dir "jax[cpu]"; \
+        fi; \
+    else \
+        # GPU build: use CUDA 12 wheels from JAX release index
+        if [ -n "${JAX_VERSION}" ]; then \
+            python -m pip install --no-cache-dir "jax[cuda12_pip]==${JAX_VERSION}" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html; \
+        else \
+            python -m pip install --no-cache-dir "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html; \
+        fi; \
+    fi
+
+# Default command runs the ViT script
+CMD ["python", "vit.py"]
+
+# Notes:
+# - To use the GPU at runtime, install the NVIDIA Container Toolkit on the host and run with: --gpus all
+# - Example GPU build:   docker build -t vit:gpu --build-arg JAX_DEVICE=gpu .
+# - Example CPU build:   docker build -t vit:cpu --build-arg JAX_DEVICE=cpu --build-arg BASE_IMAGE=python:3.11-slim .
+# - Example run (GPU):   docker run --rm --gpus all -v $PWD:/app -w /app vit:gpu
+# - Example run (CPU):   docker run --rm -v $PWD:/app -w /app vit:cpu
+# - The script downloads CIFAR-100 on first run; container needs network access.
