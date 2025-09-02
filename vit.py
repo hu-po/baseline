@@ -5,14 +5,13 @@ Vision Transformer (ViT) implementation for image classification on CIFAR-100.
 
 import logging
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import keras
 import numpy as np
 import tyro
-from keras import layers, ops
 
 # Load environment variables from .env file if it exists
 try:
@@ -24,6 +23,37 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
+def _set_backend_from_env_or_cli(argv):
+    """Ensure KERAS_BACKEND is set BEFORE importing keras.
+    Honors existing env var, otherwise parses CLI for --keras-backend/--keras_backend.
+    Defaults to 'jax' if none provided.
+    """
+    if os.environ.get("KERAS_BACKEND"):
+        return
+
+    backend_value = None
+    # Support both forms: --flag=value and --flag value
+    for i, tok in enumerate(argv[1:]):
+        if tok.startswith("--keras-backend="):
+            backend_value = tok.split("=", 1)[1]
+            break
+        if tok.startswith("--keras_backend="):
+            backend_value = tok.split("=", 1)[1]
+            break
+        if tok in ("--keras-backend", "--keras_backend"):
+            if i + 2 <= len(argv) - 1:
+                backend_value = argv[i + 2]
+            break
+
+    os.environ["KERAS_BACKEND"] = backend_value or os.environ.get("KERAS_BACKEND", "jax")
+
+
+_set_backend_from_env_or_cli(sys.argv)
+
+# Now it's safe to import keras with the correct backend
+import keras
+from keras import layers, ops
 
 @dataclass
 class ViTConfig:
