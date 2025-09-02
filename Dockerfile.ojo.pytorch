@@ -20,8 +20,8 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 # Upgrade pip and install base packages
 RUN pip3 install --upgrade pip setuptools wheel
 
-# Install Keras 3 with PyTorch backend
-RUN pip3 install keras>=3.0.0
+# Install Keras 3 pinned to a version that avoids TF imports on non-TF backends
+RUN pip3 install keras==3.4.1
 
 # Install torchvision and torchaudio (compatible with existing PyTorch)
 RUN pip3 install \

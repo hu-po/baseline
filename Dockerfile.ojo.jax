@@ -14,7 +14,7 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 RUN pip3 install --upgrade pip setuptools wheel && \
     pip3 install \
       --extra-index-url https://pypi.org/simple \
-      "keras>=3.0.0" \
+      "keras==3.4.1" \
       numpy \
       matplotlib \
       pillow \
