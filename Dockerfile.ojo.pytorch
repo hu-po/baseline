@@ -1,0 +1,47 @@
+# PyTorch-based Dockerfile using jetson-containers as base
+# Based on dusty-nv/jetson-containers with PyTorch support
+FROM dustynv/l4t-pytorch:r35.2.1
+
+# Set working directory
+WORKDIR /workspace
+
+# Update system packages
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    git \
+    wget \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install base packages
+RUN pip3 install --upgrade pip setuptools wheel
+
+# Install Keras 3 with PyTorch backend
+RUN pip3 install keras>=3.0.0
+
+# Install torchvision and torchaudio (compatible with existing PyTorch)
+RUN pip3 install \
+    torchvision \
+    torchaudio
+
+# Install additional ML dependencies
+RUN pip3 install \
+    numpy \
+    matplotlib \
+    pillow \
+    scikit-learn \
+    tyro \
+    wandb \
+    python-dotenv \
+    tqdm
+
+# Set environment variables for PyTorch backend
+ENV KERAS_BACKEND=torch
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Copy project files
+COPY . /workspace/
+
+# Set default command
+CMD ["python3", "vit.py", "--help"]
