@@ -1,30 +1,13 @@
 # JAX-based Dockerfile using jetson-containers as base
 # Based on dusty-nv/jetson-containers with JAX support
-FROM dustynv/l4t-pytorch:r35.2.1
+FROM dustynv/jax:r36.4.0
 
 # Set working directory
 WORKDIR /workspace
 
-# Update system packages
-RUN apt-get update && apt-get install -y \
-    python3-pip \
-    git \
-    wget \
-    curl \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install JAX for CUDA (Jetson compatible)
-RUN pip3 install --upgrade pip setuptools wheel
-RUN pip3 install \
-    jax[cuda12_pip] \
-    -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-
-# Install Keras 3 with JAX backend
-RUN pip3 install keras>=3.0.0
-
 # Install additional ML dependencies
 RUN pip3 install \
+    keras>=3.0.0 \
     numpy \
     matplotlib \
     pillow \
