@@ -187,6 +187,100 @@ docker run --rm --gpus all nvidia/cuda:12.2.2-base-ubuntu22.04 nvidia-smi
 
 MIT License - See LICENSE file for details
 
+## Hyperparameter Sweeps
+
+The project includes automated hyperparameter optimization using WandB sweeps to find the best model configurations for each backend and device.
+
+### Quick Start Sweeps
+
+**Ook (x86_64 + RTX 4050):**
+```bash
+# Run sweeps for both JAX and PyTorch backends
+./run_sweep_ook.sh
+
+# Run specific backend only  
+./run_sweep_ook.sh jax        # JAX backend only
+./run_sweep_ook.sh pytorch    # PyTorch backend only
+```
+
+**Ojo (ARM64 + Jetson AGX Orin):**
+```bash
+# Run sweeps for both backends (optimized for Jetson)
+./run_sweep_ojo.sh
+
+# Run specific backend only
+./run_sweep_ojo.sh pytorch    # Recommended for Jetson
+./run_sweep_ojo.sh jax        # JAX backend only
+```
+
+### Sweep Configuration
+
+The sweep optimizes the following hyperparameters:
+
+**Architecture Parameters:**
+- `projection_dim`: [32, 64, 128, 256] (128 max for Jetson)
+- `num_heads`: [2, 4, 8, 12, 16]
+- `transformer_layers`: [4, 6, 8, 12, 16] (8 max for Jetson)
+- `image_size`: [48, 64, 72, 96] (72 max for Jetson)
+- `patch_size`: [4, 6, 8, 12, 16]
+
+**Training Parameters:**
+- `learning_rate`: Log-uniform [0.0001, 0.01]
+- `batch_size`: [32, 64, 128, 256] (Ook) / [16, 32, 64, 128] (Ojo)
+- `weight_decay`: Log-uniform [0.00001, 0.001]
+- `num_epochs`: 20 (Ook) / 15 (Ojo)
+
+**Optimization:**
+- **Method**: Random search with Hyperband early termination
+- **Metric**: Maximize `val_top-5-accuracy`
+- **Backend**: Compares JAX vs PyTorch performance
+
+### Manual Sweep Setup
+
+To create custom sweeps:
+
+1. **Modify sweep configuration:**
+```bash
+# Edit sweep_config.json for custom parameters
+nano sweep_config.json
+```
+
+2. **Create sweep manually:**
+```bash
+wandb sweep sweep_config.json --project keras3_edge_baseline --entity hug
+```
+
+3. **Run sweep agents:**
+```bash
+# Ook with JAX
+docker run --rm --gpus all -v $PWD:/app -e WANDB_API_KEY=$WANDB_API_KEY vit:ook-jax \
+  wandb agent hug/keras3_edge_baseline/SWEEP_ID
+
+# Ojo with PyTorch  
+docker run --rm --runtime nvidia --gpus all -v $PWD:/workspace -e WANDB_API_KEY=$WANDB_API_KEY vit:ojo-pytorch \
+  wandb agent hug/keras3_edge_baseline/SWEEP_ID
+```
+
+### Monitoring Sweeps
+
+- **Dashboard**: https://wandb.ai/hug/keras3_edge_baseline/sweeps
+- **Live metrics**: Training loss, accuracy, validation metrics
+- **Comparison**: Side-by-side backend and device performance
+- **Resource usage**: GPU memory, training time per epoch
+
+### Device-Specific Optimizations
+
+**Ook (RTX 4050):**
+- Larger batch sizes (up to 256-512)
+- Full model architecture space
+- 20 epochs per run
+
+**Ojo (Jetson AGX Orin):**
+- Memory-optimized batch sizes (16-128)
+- Reduced model complexity for efficiency
+- 15 epochs for faster iteration
+- PyTorch backend recommended for better ARM64 support
+
 ## Citation
 
 Based on the Vision Transformer paper:
