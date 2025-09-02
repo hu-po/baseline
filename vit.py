@@ -53,8 +53,9 @@ class ViTConfig:
     
     # Wandb settings
     use_wandb: bool = True
-    wandb_project: str = "keras3_edge_baseline"
-    wandb_entity: Optional[str] = "hug"
+    # Default to env vars if set
+    wandb_project: str = os.getenv("WANDB_PROJECT", "keras3_edge_baseline")
+    wandb_entity: Optional[str] = os.getenv("WANDB_ENTITY", "hug")
     wandb_run_name: Optional[str] = None
     wandb_tags: Optional[List[str]] = None
     

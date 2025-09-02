@@ -7,9 +7,19 @@ set -e
 
 # Configuration
 SWEEP_CONFIG="sweep_config.json"
-PROJECT="keras3_edge_baseline"
-ENTITY="hug"
 NODE_NAME="ojo"
+
+# Load env (WANDB_API_KEY, WANDB_ENTITY, WANDB_PROJECT)
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.env
+    set +a
+fi
+
+# Resolve WandB settings
+PROJECT="${WANDB_PROJECT:-keras3_edge_baseline}"
+ENTITY="${WANDB_ENTITY:-}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -21,7 +31,7 @@ echo -e "${GREEN}🚀 Keras3 Edge Baseline - Ojo Sweep Runner${NC}"
 echo -e "${YELLOW}Node: ${NODE_NAME} (ARM64 + Jetson AGX Orin)${NC}"
 
 # Check if .env file exists
-if [ ! -f ".env" ]; then
+if [ -z "${WANDB_API_KEY:-}" ]; then
     echo -e "${RED}❌ Error: .env file not found${NC}"
     echo "Please create a .env file with your WANDB_API_KEY:"
     echo "echo 'WANDB_API_KEY=your_key_here' > .env"
@@ -38,6 +48,12 @@ fi
 run_sweep() {
     local backend=$1
     local container_name="vit:ojo-${backend}"
+
+    # Normalize backend label for Keras (torch vs pytorch)
+    local keras_backend="$backend"
+    if [ "$backend" = "pytorch" ] || [ "$backend" = "torch" ]; then
+        keras_backend="torch"
+    fi
     
     echo -e "${YELLOW}🏗️  Building ${backend} container...${NC}"
     docker build -f "Dockerfile.ojo.${backend}" -t "$container_name" .
@@ -45,7 +61,13 @@ run_sweep() {
     echo -e "${GREEN}🔍 Creating WandB sweep for ${backend} backend...${NC}"
     
     # Create sweep and capture sweep ID
-    SWEEP_ID=$(docker run --rm -v $PWD:/workspace -e WANDB_API_KEY="$(grep WANDB_API_KEY .env | cut -d '=' -f2)" \
+    if [ -z "$ENTITY" ]; then
+        echo -e "${RED}❌ Error: WANDB_ENTITY not set${NC}"
+        echo "Set WANDB_ENTITY in .env (e.g., your username or team)."
+        exit 1
+    fi
+
+    SWEEP_ID=$(docker run --rm -v $PWD:/workspace -e WANDB_API_KEY="$WANDB_API_KEY" \
         "$container_name" python3 -c "
 import json
 import wandb
@@ -56,7 +78,7 @@ with open('/workspace/$SWEEP_CONFIG', 'r') as f:
     sweep_config = json.load(f)
 
 # Set backend-specific configuration
-sweep_config['parameters']['keras_backend'] = {'value': '$backend'}
+sweep_config['parameters']['keras_backend'] = {'value': '$keras_backend'}
 sweep_config['parameters']['node_name'] = {'value': '$NODE_NAME'}
 
 # Jetson-specific optimizations - use smaller batch sizes and models due to memory constraints
@@ -87,7 +109,7 @@ print(f'SWEEP_ID:{sweep_id}')
     # Start sweep agent
     docker run --rm --runtime nvidia --gpus all \
         -v $PWD:/workspace \
-        -e WANDB_API_KEY="$(grep WANDB_API_KEY .env | cut -d '=' -f2)" \
+        -e WANDB_API_KEY="$WANDB_API_KEY" \
         "$container_name" \
         wandb agent "${ENTITY}/${PROJECT}/${SWEEP_ID}"
 }
