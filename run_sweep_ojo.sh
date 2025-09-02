@@ -88,6 +88,9 @@ sweep_config['parameters']['transformer_layers'] = {'values': [4, 6, 8]}
 sweep_config['parameters']['image_size'] = {'values': [48, 64, 72]}
 sweep_config['parameters']['num_epochs'] = {'value': 15}  # Slightly fewer epochs for faster iteration
 
+# Set sweep name with backend and node suffix
+sweep_config['name'] = f\"{sweep_config.get('name', 'keras3_edge_baseline')}_{$NODE_NAME}_{$keras_backend}\"
+
 # Initialize wandb and create sweep
 wandb.login()
 sweep_id = wandb.sweep(sweep_config, project='$PROJECT', entity='$ENTITY')
@@ -125,24 +128,12 @@ case "${1:-both}" in
         run_sweep "pytorch"
         ;;
     "both"|"")
-        echo -e "${YELLOW}🎯 Running sweeps for both backends${NC}"
+        echo -e "${YELLOW}🎯 Running sweeps for both backends sequentially${NC}"
         echo -e "${YELLOW}Starting with PyTorch backend (better Jetson support)...${NC}"
-        run_sweep "pytorch" &
-        PYTORCH_PID=$!
+        run_sweep "pytorch"
         
-        sleep 15  # Stagger the starts more on Jetson
-        
-        echo -e "${YELLOW}Starting with JAX backend...${NC}"
-        run_sweep "jax" &
-        JAX_PID=$!
-        
-        echo -e "${GREEN}🏃 Both sweep agents started in parallel${NC}"
-        echo -e "${YELLOW}PyTorch PID: $PYTORCH_PID${NC}"
-        echo -e "${YELLOW}JAX PID: $JAX_PID${NC}"
-        echo -e "${YELLOW}Press Ctrl+C to stop all agents${NC}"
-        
-        # Wait for both processes
-        wait $PYTORCH_PID $JAX_PID
+        echo -e "${YELLOW}PyTorch backend completed. Starting JAX backend...${NC}"
+        run_sweep "jax"
         ;;
     "help"|"-h"|"--help")
         echo "Usage: $0 [jax|pytorch|both|help]"
@@ -150,7 +141,7 @@ case "${1:-both}" in
         echo "Options:"
         echo "  jax        Run sweep with JAX backend only"
         echo "  pytorch    Run sweep with PyTorch backend only"
-        echo "  both       Run sweeps with both backends in parallel (default)"
+        echo "  both       Run sweeps with both backends sequentially (default)"
         echo "  help       Show this help message"
         echo ""
         echo "Note: This script is optimized for Jetson AGX Orin with:"
