@@ -1,17 +1,14 @@
-# PyTorch-based Dockerfile using jetson-containers as base
-# Based on dusty-nv/jetson-containers with PyTorch support
-FROM dustynv/l4t-pytorch:r35.2.1
+# PyTorch-based Dockerfile using latest Jetson Containers PyTorch image
+# https://github.com/dusty-nv/jetson-containers/tree/master/packages/pytorch
+FROM dustynv/pytorch:r36.4.0
 
 # Set working directory
 WORKDIR /workspace
 
-# Update system packages
+# Update system packages (minimal)
 RUN apt-get update && apt-get install -y \
     python3-pip \
     git \
-    wget \
-    curl \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Create python symlink for compatibility  
@@ -21,15 +18,12 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 RUN pip3 install --upgrade pip setuptools wheel
 
 # Install Keras 3 from PyPI (Jetson mirror lacks Keras 3)
-# Constrain to <3.5 for Python 3.8 compatibility on this base image
+# Base image uses Python 3.10, so Keras 3.x is available
 RUN pip3 install \
     --extra-index-url https://pypi.org/simple \
-    "keras>=3.0.0,<3.5"
+    "keras>=3.0.0,<3.6"
 
-# Install torchvision and torchaudio (compatible with existing PyTorch)
-RUN pip3 install \
-    torchvision \
-    torchaudio
+# torchvision/torchaudio are provided by the base image; avoid reinstalling
 
 # Install additional ML dependencies
 RUN pip3 install \
