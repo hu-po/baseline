@@ -81,13 +81,6 @@ with open('/workspace/$SWEEP_CONFIG', 'r') as f:
 sweep_config['parameters']['keras_backend'] = {'value': '$keras_backend'}
 sweep_config['parameters']['node_name'] = {'value': '$NODE_NAME'}
 
-# Jetson-specific optimizations - use smaller batch sizes and models due to memory constraints
-sweep_config['parameters']['batch_size'] = {'values': [16, 32, 64, 128]}
-sweep_config['parameters']['projection_dim'] = {'values': [32, 64, 128]}
-sweep_config['parameters']['transformer_layers'] = {'values': [4, 6, 8]}
-sweep_config['parameters']['image_size'] = {'values': [48, 64, 72]}
-sweep_config['parameters']['num_epochs'] = {'value': 15}  # Slightly fewer epochs for faster iteration
-
 # Set sweep name with backend and node suffix
 sweep_config['name'] = f\"{sweep_config.get('name', 'keras3_edge_baseline')}_{'$NODE_NAME'}_{'$keras_backend'}\"
 
