@@ -415,4 +415,29 @@ def main(config: ViTConfig = ViTConfig()):
 
 
 if __name__ == "__main__":
-    tyro.cli(main)
+    # Make the CLI compatible with WandB's arg style:
+    # - Accept top-level flags (no nested --config.*)
+    # - Accept underscore-separated flags (e.g., --batch_size)
+    #   by translating them to Tyro's kebab-case (e.g., --batch-size)
+    import sys
+
+    def _normalize_flags(argv):
+        out = [argv[0]]
+        for tok in argv[1:]:
+            if tok.startswith("--"):
+                # Handle forms: --flag=value and --flag value
+                if "=" in tok:
+                    name, val = tok.split("=", 1)
+                    name = name.replace("_", "-")
+                    out.append(f"{name}={val}")
+                else:
+                    out.append(tok.replace("_", "-"))
+            else:
+                out.append(tok)
+        return out
+
+    sys.argv = _normalize_flags(sys.argv)
+
+    # Parse directly into ViTConfig at the top level, then invoke main.
+    cfg = tyro.cli(ViTConfig)
+    main(cfg)
