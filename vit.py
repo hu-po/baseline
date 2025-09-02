@@ -5,7 +5,7 @@ Vision Transformer (ViT) implementation for image classification on CIFAR-100.
 
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -29,35 +29,35 @@ logger = logging.getLogger(__name__)
 class ViTConfig:
     """Configuration for Vision Transformer model and training."""
     # Model architecture
-    num_classes: int = 100
-    input_shape: Tuple[int, int, int] = (32, 32, 3)
-    image_size: int = 72
-    patch_size: int = 6
-    projection_dim: int = 64
-    num_heads: int = 4
-    transformer_layers: int = 8
-    transformer_units: List[int] = None
-    mlp_head_units: List[int] = None
+    num_classes = 100
+    input_shape = (32, 32, 3)
+    image_size = 72
+    patch_size = 6
+    projection_dim = 64
+    num_heads = 4
+    transformer_layers = 8
+    transformer_units = None
+    mlp_head_units = None
     
     # Training parameters
-    learning_rate: float = 0.001
-    weight_decay: float = 0.0001
-    batch_size: int = 256
-    num_epochs: int = 10
-    validation_split: float = 0.1
+    learning_rate = 0.001
+    weight_decay = 0.0001
+    batch_size = 256
+    num_epochs = 10
+    validation_split = 0.1
     
     # Other settings
-    keras_backend: str = "jax"
-    checkpoint_path: str = "/tmp/checkpoint.weights.h5"
-    node_name: str = "unknown"  # Will be auto-detected or set via CLI
+    keras_backend = "jax"
+    checkpoint_path = "/tmp/checkpoint.weights.h5"
+    node_name = "unknown"  # Will be auto-detected or set via CLI
     
     # Wandb settings
-    use_wandb: bool = True
+    use_wandb = True
     # Default to env vars if set
-    wandb_project: str = os.getenv("WANDB_PROJECT", "keras3_edge_baseline")
-    wandb_entity: Optional[str] = os.getenv("WANDB_ENTITY", "hug")
-    wandb_run_name: Optional[str] = None
-    wandb_tags: Optional[List[str]] = None
+    wandb_project = os.getenv("WANDB_PROJECT", "keras3_edge_baseline")
+    wandb_entity = os.getenv("WANDB_ENTITY", "hug")
+    wandb_run_name = None
+    wandb_tags = None
     
     def __post_init__(self):
         if self.transformer_units is None:
