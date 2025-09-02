@@ -12,9 +12,14 @@ from typing import List, Optional, Tuple
 import keras
 import numpy as np
 import tyro
-import wandb
 from keras import layers, ops
-from wandb.keras import WandbCallback
+
+# Load environment variables from .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # This loads the .env file from the current directory
+except ImportError:
+    pass  # dotenv not installed, continue without it
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -47,8 +52,8 @@ class ViTConfig:
     
     # Wandb settings
     use_wandb: bool = True
-    wandb_project: str = "vit-cifar100"
-    wandb_entity: Optional[str] = None
+    wandb_project: str = "keras3_edge_baseline"
+    wandb_entity: Optional[str] = "hug"
     wandb_run_name: Optional[str] = None
     wandb_tags: Optional[List[str]] = None
     
@@ -93,6 +98,8 @@ class Patches(layers.Layer):
         self.patch_size = patch_size
 
     def call(self, images):
+        # Ensure float dtype for JAX/cuDNN compatibility
+        images = ops.convert_to_tensor(images, dtype="float32")
         input_shape = ops.shape(images)
         batch_size = input_shape[0]
         height = input_shape[1]
@@ -216,12 +223,21 @@ def run_experiment(model: keras.Model, config: ViTConfig, x_train: np.ndarray,
     
     # Add wandb callback if enabled
     if config.use_wandb:
-        callbacks.append(WandbCallback(
-            save_model=False,
-            monitor="val_accuracy",
-            mode="max",
-            save_weights_only=True,
-        ))
+        try:
+            import wandb
+            try:
+                from wandb.integration.keras import WandbCallback  # type: ignore
+            except Exception:
+                from wandb.keras import WandbCallback  # type: ignore
+            callbacks.append(WandbCallback(
+                save_model=False,
+                monitor="val_accuracy",
+                mode="max",
+                save_weights_only=True,
+            ))
+        except Exception as e:
+            logger.warning(f"wandb not available ({e}); continuing without wandb.")
+            config.use_wandb = False
 
     history = model.fit(
         x=x_train,
@@ -240,10 +256,14 @@ def run_experiment(model: keras.Model, config: ViTConfig, x_train: np.ndarray,
     
     # Log final test metrics to wandb
     if config.use_wandb:
-        wandb.log({
-            "test_accuracy": test_accuracy,
-            "test_top5_accuracy": test_top5_accuracy,
-        })
+        try:
+            import wandb
+            wandb.log({
+                "test_accuracy": test_accuracy,
+                "test_top5_accuracy": test_top5_accuracy,
+            })
+        except Exception as e:
+            logger.warning(f"wandb logging failed ({e}).")
 
     return history, test_accuracy, test_top5_accuracy
 
@@ -254,6 +274,14 @@ def main(config: ViTConfig = ViTConfig()):
     os.environ["KERAS_BACKEND"] = config.keras_backend
     
     # Initialize wandb if enabled
+    if config.use_wandb:
+        try:
+            import wandb
+        except Exception as e:
+            logger.warning(f"wandb not available ({e}); disabling wandb.")
+            config.use_wandb = False
+            wandb = None  # type: ignore
+
     if config.use_wandb:
         wandb_config = {
             "architecture": "Vision Transformer",
@@ -304,9 +332,13 @@ def main(config: ViTConfig = ViTConfig()):
     
     # Log model summary to wandb
     if config.use_wandb:
-        model_params = vit_classifier.count_params()
-        wandb.log({"total_parameters": model_params})
-        logger.info(f"Total model parameters: {model_params:,}")
+        try:
+            import wandb
+            model_params = vit_classifier.count_params()
+            wandb.log({"total_parameters": model_params})
+            logger.info(f"Total model parameters: {model_params:,}")
+        except Exception as e:
+            logger.warning(f"wandb parameter logging failed ({e}).")
     
     # Train and evaluate
     logger.info("Starting training...")
@@ -316,9 +348,13 @@ def main(config: ViTConfig = ViTConfig()):
     
     # Log final summary
     if config.use_wandb:
-        wandb.summary["final_test_accuracy"] = test_accuracy
-        wandb.summary["final_test_top5_accuracy"] = test_top5_accuracy
-        wandb.finish()
+        try:
+            import wandb
+            wandb.summary["final_test_accuracy"] = test_accuracy
+            wandb.summary["final_test_top5_accuracy"] = test_top5_accuracy
+            wandb.finish()
+        except Exception as e:
+            logger.warning(f"wandb summary logging failed ({e}).")
     
     logger.info("Training complete!")
     return history

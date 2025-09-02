@@ -1,18 +1,17 @@
-# GPU-only Dockerfile for running vit.py with Keras (JAX backend) on CUDA 12.x.
+# GPU-only Dockerfile for running vit.py with Keras (PyTorch backend) on CUDA 12.x.
 # Targets the x86_64 system in system_ook.md (RTX 4050, CUDA 12.x).
 
 ARG BASE_IMAGE=nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu22.04
 FROM ${BASE_IMAGE}
 
-# Set non-interactive frontend and sensible defaults for headless plotting and JAX memory behavior
+# Set non-interactive frontend and sensible defaults
 ENV DEBIAN_FRONTEND=noninteractive \
     MPLBACKEND=Agg \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    XLA_PYTHON_CLIENT_PREALLOCATE=false \
-    KERAS_BACKEND=jax \
-    JAX_PLATFORM_NAME=gpu
+    KERAS_BACKEND=torch \
+    CUDA_VISIBLE_DEVICES=0
 
 WORKDIR /app
 
@@ -29,19 +28,20 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 COPY vit.py /app/
 
 # Install Python dependencies (GPU-only)
-# - Pin JAX to a CUDA12-compatible version known to expose the GPU reliably from pip wheels.
+# - PyTorch with CUDA 12.1 support (compatible with CUDA 12.2)
 RUN set -eux; \
     python -m pip install --upgrade pip; \
     # Core libs
     python -m pip install --no-cache-dir numpy matplotlib "keras>=3.0.0" tyro wandb python-dotenv; \
-    # JAX GPU wheels (CUDA 12) from release index
-    python -m pip install --no-cache-dir "jax[cuda12_pip]==0.4.31" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+    # PyTorch GPU wheels (CUDA 12.1) - compatible with CUDA 12.2
+    python -m pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
-# Default command runs the ViT script
-CMD ["python", "vit.py"]
+# Default command runs the ViT script with PyTorch backend
+CMD ["python", "vit.py", "--keras-backend", "torch"]
 
 # Notes:
 # - Requires NVIDIA Container Toolkit on host; run with: --gpus all
-# - Build: docker build -f Dockerfile.ook.jax -t vit:ook-jax .
-# - Run:   docker run --rm --gpus all -v $PWD:/app -w /app vit:ook-jax
+# - Build: docker build -f Dockerfile.ook.pytorch -t vit:ook-pytorch .
+# - Run:   docker run --rm --gpus all -v $PWD:/app -w /app vit:ook-pytorch
+# - Override backend: docker run --rm --gpus all -v $PWD:/app -w /app vit:ook-pytorch python vit.py --keras-backend torch
 # - The script downloads CIFAR-100 on first run; container needs network access.
