@@ -43,4 +43,4 @@ ENV XLA_PYTHON_CLIENT_PREALLOCATE=false
 COPY . /workspace/
 
 # Set default command
-CMD ["python3", "vit.py", "--help"]
+CMD ["python3", "vit.py"]

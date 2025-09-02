@@ -43,5 +43,5 @@ ENV CUDA_VISIBLE_DEVICES=0
 # Copy project files
 COPY . /workspace/
 
-# Set default command
-CMD ["python3", "vit.py", "--help"]
+# Default command runs the ViT script with PyTorch backend
+CMD ["python", "vit.py", "--keras-backend", "torch"]
