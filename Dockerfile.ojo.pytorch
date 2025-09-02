@@ -1,6 +1,6 @@
 # PyTorch-based Dockerfile using latest Jetson Containers PyTorch image
 # https://github.com/dusty-nv/jetson-containers/tree/master/packages/pytorch
-FROM dustynv/pytorch:r36.4.0
+FROM dustynv/l4t-pytorch:r36.4.0
 
 # Set working directory
 WORKDIR /workspace
