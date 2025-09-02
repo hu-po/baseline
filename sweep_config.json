@@ -15,19 +15,19 @@
       "values": [8, 16, 32]
     },
     "projection_dim": {
-      "values": [32, 64, 128]
+      "values": [32, 64]
     },
     "num_heads": {
-      "values": [2, 4, 8]
+      "values": [2, 4]
     },
     "transformer_layers": {
-      "values": [4, 6, 8]
+      "values": [4, 6]
     },
     "image_size": {
       "values": [48, 64, 72]
     },
     "patch_size": {
-      "values": [4, 6, 8]
+      "values": [4, 6]
     },
     "weight_decay": {
       "distribution": "log_uniform_values",
