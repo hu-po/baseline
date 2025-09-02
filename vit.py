@@ -49,6 +49,7 @@ class ViTConfig:
     # Other settings
     keras_backend: str = "jax"
     checkpoint_path: str = "/tmp/checkpoint.weights.h5"
+    node_name: str = "unknown"  # Will be auto-detected or set via CLI
     
     # Wandb settings
     use_wandb: bool = True
@@ -88,6 +89,60 @@ def mlp(x, hidden_units: List[int], dropout_rate: float):
         x = layers.Dense(units, activation=keras.activations.gelu)(x)
         x = layers.Dropout(dropout_rate)(x)
     return x
+
+
+class CustomWandbCallback(keras.callbacks.Callback):
+    """Custom WandB callback that works with all Keras backends."""
+    
+    def __init__(self):
+        super().__init__()
+        self.wandb_available = False
+        try:
+            import wandb
+            self.wandb = wandb
+            self.wandb_available = True
+        except ImportError:
+            pass
+    
+    def on_epoch_end(self, epoch, logs=None):
+        if not self.wandb_available or logs is None:
+            return
+        
+        # Log all metrics from the epoch
+        wandb_logs = {}
+        for key, value in logs.items():
+            # Convert numpy types to Python types for wandb
+            if hasattr(value, 'item'):
+                value = value.item()
+            elif hasattr(value, '__float__'):
+                value = float(value)
+            wandb_logs[key] = value
+        
+        # Add epoch number
+        wandb_logs['epoch'] = epoch + 1
+        
+        try:
+            self.wandb.log(wandb_logs)
+        except Exception as e:
+            logger.warning(f"Failed to log metrics to wandb: {e}")
+    
+    def on_train_end(self, logs=None):
+        if not self.wandb_available:
+            return
+        
+        if logs:
+            final_logs = {}
+            for key, value in logs.items():
+                if hasattr(value, 'item'):
+                    value = value.item()
+                elif hasattr(value, '__float__'):
+                    value = float(value)
+                final_logs[f"final_{key}"] = value
+            
+            try:
+                self.wandb.log(final_logs)
+            except Exception as e:
+                logger.warning(f"Failed to log final metrics to wandb: {e}")
 
 
 class Patches(layers.Layer):
@@ -221,23 +276,9 @@ def run_experiment(model: keras.Model, config: ViTConfig, x_train: np.ndarray,
         )
     ]
     
-    # Add wandb callback if enabled
+    # Add custom wandb callback if enabled
     if config.use_wandb:
-        try:
-            import wandb
-            try:
-                from wandb.integration.keras import WandbCallback  # type: ignore
-            except Exception:
-                from wandb.keras import WandbCallback  # type: ignore
-            callbacks.append(WandbCallback(
-                save_model=False,
-                monitor="val_accuracy",
-                mode="max",
-                save_weights_only=True,
-            ))
-        except Exception as e:
-            logger.warning(f"wandb not available ({e}); continuing without wandb.")
-            config.use_wandb = False
+        callbacks.append(CustomWandbCallback())
 
     history = model.fit(
         x=x_train,
@@ -270,6 +311,11 @@ def run_experiment(model: keras.Model, config: ViTConfig, x_train: np.ndarray,
 
 def main(config: ViTConfig = ViTConfig()):
     """Main training function."""
+    # Auto-detect node name if not set
+    if config.node_name == "unknown":
+        import socket
+        config.node_name = socket.gethostname()
+    
     # Set Keras backend
     os.environ["KERAS_BACKEND"] = config.keras_backend
     
@@ -284,8 +330,13 @@ def main(config: ViTConfig = ViTConfig()):
 
     if config.use_wandb:
         wandb_config = {
+            # System info
+            "backend": config.keras_backend,
+            "node": config.node_name,
             "architecture": "Vision Transformer",
             "dataset": "CIFAR-100",
+            
+            # Model architecture
             "num_classes": config.num_classes,
             "image_size": config.image_size,
             "patch_size": config.patch_size,
@@ -294,12 +345,14 @@ def main(config: ViTConfig = ViTConfig()):
             "transformer_layers": config.transformer_layers,
             "transformer_units": config.transformer_units,
             "mlp_head_units": config.mlp_head_units,
+            "num_patches": config.num_patches,
+            
+            # Training parameters
             "learning_rate": config.learning_rate,
             "weight_decay": config.weight_decay,
             "batch_size": config.batch_size,
             "num_epochs": config.num_epochs,
-            "num_patches": config.num_patches,
-            "keras_backend": config.keras_backend,
+            "validation_split": config.validation_split,
         }
         
         wandb.init(
