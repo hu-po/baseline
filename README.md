@@ -70,15 +70,15 @@ Run with custom hyperparameters:
 docker run --rm --gpus all \
   -v $PWD:/app \
   vit:ook-jax \
-  python vit.py --config.num-epochs 100 --config.batch-size 512
+  python vit.py --num-epochs 100 --batch-size 512
 
 # Custom run name and tags (PyTorch)
 docker run --rm --gpus all \
   -v $PWD:/app \
   vit:ook-pytorch \
   python vit.py \
-    --config.wandb-run-name "pytorch-rtx4050-100ep" \
-    --config.wandb-tags '["baseline", "100-epochs", "ook"]'
+    --wandb-run-name "pytorch-rtx4050-100ep" \
+    --wandb-tags '["baseline", "100-epochs", "ook"]'
 ```
 
 #### Run without WandB
@@ -86,7 +86,7 @@ docker run --rm --gpus all \
 docker run --rm --gpus all \
   -v $PWD:/app \
   vit:ook-jax \
-  python vit.py --config.no-use-wandb
+  python vit.py --no-use-wandb
 ```
 
 ## Configuration
@@ -94,28 +94,28 @@ docker run --rm --gpus all \
 The ViT model can be configured via command-line arguments:
 
 ### Model Architecture
-- `--config.image-size`: Input image size (default: 72)
-- `--config.patch-size`: Size of image patches (default: 6)
-- `--config.projection-dim`: Projection dimension (default: 64)
-- `--config.num-heads`: Number of attention heads (default: 4)
-- `--config.transformer-layers`: Number of transformer blocks (default: 8)
+- `--image-size`: Input image size (default: 72)
+- `--patch-size`: Size of image patches (default: 6)
+- `--projection-dim`: Projection dimension (default: 64)
+- `--num-heads`: Number of attention heads (default: 4)
+- `--transformer-layers`: Number of transformer blocks (default: 8)
 
 ### Training Parameters
-- `--config.learning-rate`: Learning rate (default: 0.001)
-- `--config.weight-decay`: Weight decay (default: 0.0001)
-- `--config.batch-size`: Batch size (default: 256 for JAX, 64 recommended for PyTorch)
-- `--config.num-epochs`: Number of epochs (default: 10)
-- `--config.validation-split`: Validation split ratio (default: 0.1)
+- `--learning-rate`: Learning rate (default: 0.001)
+- `--weight-decay`: Weight decay (default: 0.0001)
+- `--batch-size`: Batch size (default: 256 for JAX, 64 recommended for PyTorch)
+- `--num-epochs`: Number of epochs (default: 10)
+- `--validation-split`: Validation split ratio (default: 0.1)
 
 ### Backend Selection
-- `--config.keras-backend`: Choose backend: "jax", "torch", or "tensorflow"
+- `--keras-backend`: Choose backend: "jax", "torch", or "tensorflow"
 
 ### WandB Settings
-- `--config.use-wandb / --config.no-use-wandb`: Enable/disable WandB logging (default: True)
-- `--config.wandb-project`: WandB project name (default: "keras3_edge_baseline")
-- `--config.wandb-entity`: WandB entity/team (default: "hug")
-- `--config.wandb-run-name`: Custom run name
-- `--config.wandb-tags`: List of tags for the run
+- `--use-wandb` / `--no-use-wandb`: Enable/disable WandB logging (default: True)
+- `--wandb-project`: WandB project name (default: "keras3_edge_baseline")
+- `--wandb-entity`: WandB entity/team (default: "hug")
+- `--wandb-run-name`: Custom run name
+- `--wandb-tags`: List of tags for the run
 
 ## Monitoring
 
@@ -162,8 +162,8 @@ The goal is to identify the optimal Keras 3 backend for edge deployment by compa
 ## Troubleshooting
 
 ### CUDA Out of Memory
-- **JAX**: Try `--config.batch-size 128`
-- **PyTorch**: Try `--config.batch-size 64` or `--config.batch-size 32`
+- **JAX**: Try `--batch-size 128`
+- **PyTorch**: Try `--batch-size 64` or `--batch-size 32`
 
 ### WandB Authentication Issues
 ```bash
@@ -292,4 +292,3 @@ Based on the Vision Transformer paper:
   year={2020}
 }
 ```
-
