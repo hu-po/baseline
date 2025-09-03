@@ -24,19 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Ensure `python` points to Python 3.11
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 
-# Copy application code
 COPY vit.py /app/
 
-# Install Python dependencies (GPU-only)
-# - PyTorch with CUDA 12.1 support (compatible with CUDA 12.2)
 RUN set -eux; \
     python -m pip install --upgrade pip; \
-    # Core libs
     python -m pip install --no-cache-dir numpy matplotlib "keras>=3.0.0" tyro wandb python-dotenv; \
-    # PyTorch GPU wheels (CUDA 12.1) - compatible with CUDA 12.2
     python -m pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
-# Default command runs the ViT script with PyTorch backend
 CMD ["python", "vit.py", "--keras-backend", "torch"]
 
 # Notes:
