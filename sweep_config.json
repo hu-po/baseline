@@ -15,16 +15,16 @@
       "values": [8, 16, 32]
     },
     "projection_dim": {
-      "values": [32, 64]
+      "values": [16, 32]
     },
     "num_heads": {
       "values": [2, 4]
     },
     "transformer_layers": {
-      "values": [4, 6]
+      "values": [2, 4]
     },
     "image_size": {
-      "values": [48, 64, 72]
+      "values": [48, 64]
     },
     "patch_size": {
       "values": [4, 6]
@@ -45,6 +45,6 @@
     "type": "hyperband",
     "s": 2,
     "eta": 3,
-    "max_iter": 20
+    "max_iter": 3
   }
 }
