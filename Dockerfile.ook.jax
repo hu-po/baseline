@@ -22,22 +22,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 libsm6 libxext6 libxrender1 curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Ensure `python` points to Python 3.11
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
 
-# Copy application code
 COPY vit.py /app/
 
-# Install Python dependencies (GPU-only)
-# - Pin JAX to a CUDA12-compatible version known to expose the GPU reliably from pip wheels.
 RUN set -eux; \
     python -m pip install --upgrade pip; \
-    # Core libs
     python -m pip install --no-cache-dir numpy matplotlib "keras>=3.0.0" tyro wandb python-dotenv; \
-    # JAX GPU wheels (CUDA 12) from release index
     python -m pip install --no-cache-dir "jax[cuda12_pip]==0.4.31" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
-# Default command runs the ViT script
 CMD ["python", "vit.py"]
 
 # Notes:

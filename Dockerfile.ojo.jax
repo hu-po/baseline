@@ -2,10 +2,8 @@
 # Based on dusty-nv/jetson-containers with JAX support
 FROM dustynv/jax:r36.4.0
 
-# Set working directory
 WORKDIR /workspace
 
-# Create python symlink for compatibility
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 # Install additional ML dependencies
@@ -29,8 +27,6 @@ ENV KERAS_BACKEND=jax
 ENV JAX_PLATFORM_NAME=gpu
 ENV XLA_PYTHON_CLIENT_PREALLOCATE=false
 
-# Copy project files
 COPY . /workspace/
 
-# Set default command
 CMD ["python3", "vit.py"]

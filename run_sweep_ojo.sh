@@ -49,7 +49,6 @@ run_sweep() {
     local backend=$1
     local container_name="vit:ojo-${backend}"
 
-    # Normalize backend label for Keras (torch vs pytorch)
     local keras_backend="$backend"
     if [ "$backend" = "pytorch" ] || [ "$backend" = "torch" ]; then
         keras_backend="torch"
@@ -60,7 +59,6 @@ run_sweep() {
     
     echo -e "${GREEN}🔍 Creating WandB sweep for ${backend} backend...${NC}"
     
-    # Create sweep and capture sweep ID
     if [ -z "$ENTITY" ]; then
         echo -e "${RED}❌ Error: WANDB_ENTITY not set${NC}"
         echo "Set WANDB_ENTITY in .env (e.g., your username or team)."
@@ -90,7 +88,6 @@ sweep_id = wandb.sweep(sweep_config, project='$PROJECT', entity='$ENTITY')
 print(f'SWEEP_ID:{sweep_id}')
 ")
     
-    # Extract sweep ID from output
     SWEEP_ID=$(echo "$SWEEP_ID" | grep "SWEEP_ID:" | cut -d':' -f2)
     
     if [ -z "$SWEEP_ID" ]; then

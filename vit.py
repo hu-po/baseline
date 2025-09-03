@@ -16,9 +16,9 @@ import tyro
 # Load environment variables from .env file if it exists
 try:
     from dotenv import load_dotenv
-    load_dotenv()  # This loads the .env file from the current directory
+    load_dotenv()
 except ImportError:
-    pass  # dotenv not installed, continue without it
+    pass
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -33,7 +33,6 @@ def _set_backend_from_env_or_cli(argv):
         return
 
     backend_value = None
-    # Support both forms: --flag=value and --flag value
     for i, tok in enumerate(argv[1:]):
         if tok.startswith("--keras-backend="):
             backend_value = tok.split("=", 1)[1]
@@ -51,7 +50,6 @@ def _set_backend_from_env_or_cli(argv):
 
 _set_backend_from_env_or_cli(sys.argv)
 
-# Now it's safe to import keras with the correct backend
 import keras
 from keras import layers, ops
 
@@ -79,11 +77,10 @@ class ViTConfig:
     # Other settings
     keras_backend: str = "jax"
     checkpoint_path: str = "/tmp/checkpoint.weights.h5"
-    node_name: str = "unknown"  # Will be auto-detected or set via CLI
+    node_name: str = "unknown"
     
     # Wandb settings
     use_wandb: bool = True
-    # Default to env vars if set
     wandb_project: str = os.getenv("WANDB_PROJECT", "keras3_edge_baseline")
     wandb_entity: str = os.getenv("WANDB_ENTITY", "hug")
     wandb_run_name: Optional[str] = None
@@ -139,17 +136,14 @@ class CustomWandbCallback(keras.callbacks.Callback):
         if not self.wandb_available or logs is None:
             return
         
-        # Log all metrics from the epoch
         wandb_logs = {}
         for key, value in logs.items():
-            # Convert numpy types to Python types for wandb
             if hasattr(value, 'item'):
                 value = value.item()
             elif hasattr(value, '__float__'):
                 value = float(value)
             wandb_logs[key] = value
         
-        # Add epoch number
         wandb_logs['epoch'] = epoch + 1
         
         try:
@@ -184,7 +178,6 @@ class Patches(layers.Layer):
         self.patch_size = patch_size
 
     def call(self, images):
-        # Ensure float dtype for JAX/cuDNN compatibility
         images = ops.convert_to_tensor(images, dtype="float32")
         input_shape = ops.shape(images)
         batch_size = input_shape[0]
@@ -240,33 +233,24 @@ def create_vit_classifier(config, data_augmentation):
     """Build the Vision Transformer model."""
     inputs = keras.Input(shape=config.input_shape)
     
-    # Augment data
     augmented = data_augmentation(inputs)
     
-    # Create and encode patches
     patches = Patches(config.patch_size)(augmented)
     encoded_patches = PatchEncoder(config.num_patches, config.projection_dim)(patches)
 
-    # Transformer blocks
     for _ in range(config.transformer_layers):
-        # Layer normalization 1
         x1 = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
         
-        # Multi-head attention
         attention_output = layers.MultiHeadAttention(
             num_heads=config.num_heads, key_dim=config.projection_dim, dropout=0.1
         )(x1, x1)
         
-        # Skip connection 1
         x2 = layers.Add()([attention_output, encoded_patches])
         
-        # Layer normalization 2
         x3 = layers.LayerNormalization(epsilon=1e-6)(x2)
         
-        # MLP
         x3 = mlp(x3, hidden_units=config.transformer_units, dropout_rate=0.1)
         
-        # Skip connection 2
         encoded_patches = layers.Add()([x3, x2])
 
     # Final representation
@@ -306,7 +290,6 @@ def run_experiment(model, config, x_train, y_train, x_test, y_test):
         )
     ]
     
-    # Add custom wandb callback if enabled
     if config.use_wandb:
         callbacks.append(CustomWandbCallback())
 
@@ -325,7 +308,6 @@ def run_experiment(model, config, x_train, y_train, x_test, y_test):
     logger.info(f"Test accuracy: {round(test_accuracy * 100, 2)}%")
     logger.info(f"Test top 5 accuracy: {round(test_top5_accuracy * 100, 2)}%")
     
-    # Log final test metrics to wandb
     if config.use_wandb:
         try:
             import wandb
@@ -344,15 +326,12 @@ def main(config=None):
     if config is None:
         config = ViTConfig()
     
-    # Auto-detect node name if not set
     if config.node_name == "unknown":
         import socket
         config.node_name = socket.gethostname()
     
-    # Set Keras backend
     os.environ["KERAS_BACKEND"] = config.keras_backend
     
-    # Initialize wandb if enabled
     if config.use_wandb:
         try:
             import wandb
@@ -363,13 +342,11 @@ def main(config=None):
 
     if config.use_wandb:
         wandb_config = {
-            # System info
             "backend": config.keras_backend,
             "node": config.node_name,
             "architecture": "Vision Transformer",
             "dataset": "CIFAR-100",
             
-            # Model architecture
             "num_classes": config.num_classes,
             "image_size": config.image_size,
             "patch_size": config.patch_size,
@@ -380,7 +357,6 @@ def main(config=None):
             "mlp_head_units": config.mlp_head_units,
             "num_patches": config.num_patches,
             
-            # Training parameters
             "learning_rate": config.learning_rate,
             "weight_decay": config.weight_decay,
             "batch_size": config.batch_size,
@@ -397,18 +373,15 @@ def main(config=None):
         )
         logger.info(f"Wandb run initialized: {wandb.run.name}")
     
-    # Load CIFAR-100 dataset
     logger.info("Loading CIFAR-100 dataset...")
     (x_train, y_train), (x_test, y_test) = keras.datasets.cifar100.load_data()
     
     logger.info(f"x_train shape: {x_train.shape} - y_train shape: {y_train.shape}")
     logger.info(f"x_test shape: {x_test.shape} - y_test shape: {y_test.shape}")
     
-    # Create data augmentation
     logger.info("Setting up data augmentation...")
     data_augmentation = create_data_augmentation(config, x_train)
     
-    # Build model
     logger.info("Building Vision Transformer model...")
     logger.info(f"Image size: {config.image_size} x {config.image_size}")
     logger.info(f"Patch size: {config.patch_size} x {config.patch_size}")
@@ -416,7 +389,6 @@ def main(config=None):
     
     vit_classifier = create_vit_classifier(config, data_augmentation)
     
-    # Log model summary to wandb
     if config.use_wandb:
         try:
             import wandb
@@ -426,13 +398,11 @@ def main(config=None):
         except Exception as e:
             logger.warning(f"wandb parameter logging failed ({e}).")
     
-    # Train and evaluate
     logger.info("Starting training...")
     history, test_accuracy, test_top5_accuracy = run_experiment(
         vit_classifier, config, x_train, y_train, x_test, y_test
     )
     
-    # Log final summary
     if config.use_wandb:
         try:
             import wandb
@@ -447,17 +417,12 @@ def main(config=None):
 
 
 if __name__ == "__main__":
-    # Make the CLI compatible with WandB's arg style:
-    # - Accept top-level flags (no nested --config.*)
-    # - Accept underscore-separated flags (e.g., --batch_size)
-    #   by translating them to Tyro's kebab-case (e.g., --batch-size)
     import sys
 
     def _normalize_flags(argv):
         out = [argv[0]]
         for tok in argv[1:]:
             if tok.startswith("--"):
-                # Handle forms: --flag=value and --flag value
                 if "=" in tok:
                     name, val = tok.split("=", 1)
                     name = name.replace("_", "-")
@@ -470,6 +435,5 @@ if __name__ == "__main__":
 
     sys.argv = _normalize_flags(sys.argv)
 
-    # Parse directly into ViTConfig at the top level, then invoke main.
     cfg = tyro.cli(ViTConfig)
     main(cfg)
