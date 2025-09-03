@@ -103,7 +103,7 @@ print(f'SWEEP_ID:{sweep_id}')
     echo -e "${YELLOW}📊 View sweep at: https://wandb.ai/${ENTITY}/${PROJECT}/sweeps/${SWEEP_ID}${NC}"
     
     # Start sweep agent
-    docker run --rm --runtime nvidia --gpus all \
+    docker run --rm -it --runtime nvidia --gpus all \
         -v $PWD:/workspace \
         -e WANDB_API_KEY="$WANDB_API_KEY" \
         "$container_name" \
