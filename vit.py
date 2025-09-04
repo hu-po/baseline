@@ -13,7 +13,6 @@ from typing import List, Optional, Tuple
 import numpy as np
 import tyro
 
-# Load environment variables from .env file if it exists
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -74,7 +73,6 @@ class ViTConfig:
     num_epochs: int = 10
     validation_split: float = 0.1
     
-    # Other settings
     keras_backend: str = "jax"
     checkpoint_path: str = "/tmp/checkpoint.weights.h5"
     node_name: str = "unknown"
@@ -253,12 +251,10 @@ def create_vit_classifier(config, data_augmentation):
         
         encoded_patches = layers.Add()([x3, x2])
 
-    # Final representation
     representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
     representation = layers.Flatten()(representation)
     representation = layers.Dropout(0.5)(representation)
     
-    # Classification head
     features = mlp(representation, hidden_units=config.mlp_head_units, dropout_rate=0.5)
     logits = layers.Dense(config.num_classes)(features)
     
